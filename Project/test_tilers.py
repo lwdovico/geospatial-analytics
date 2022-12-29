@@ -15,52 +15,66 @@ poly = [
         [116.1440758191, 39.8846396072],
     ]
 ]
+
+points = [
+          [116.256511, 39.946052],
+          [116.231604, 39.966576],
+          [116.224015, 40.004122],
+          [116.160351, 39.893501],
+          [116.294142, 40.601343],
+         ]
+
 geom = [shapely.geometry.Polygon(p) for p in poly]
 bbox = gpd.GeoDataFrame(geometry=geom, crs="EPSG:4326")
 
+
+@pytest.fixture()
+def voronoi():
+    return tilers.VoronoiTessellationTiler()
 
 @pytest.fixture()
 def h3_tess():
     return tilers.H3TessellationTiler()
 
 
-@pytest.mark.parametrize("tiler_type", ["squared", "h3_tessellation"])
+@pytest.mark.parametrize("tiler_type", ["squared", "h3_tessellation", "voronoi"])
 @pytest.mark.parametrize("base_shape", ["Beijing, China", bbox])
+@pytest.mark.parametrize("points", [points])
 @pytest.mark.parametrize("meters", [15000])
-def test_tiler_get(tiler_type, base_shape, meters):
-    tessellation = tilers.tiler.get(tiler_type, base_shape=base_shape, meters=meters)
+def test_tiler_get(tiler_type, base_shape, meters, points):
+    tessellation = tilers.tiler.get(tiler_type, base_shape=base_shape, meters=meters, points=points)
     assert isinstance(tessellation, gpd.GeoDataFrame)
 
 
-def test__isinstance_geodataframe_or_geoseries(h3_tess):
-    if h3_tess._isinstance_geodataframe_or_geoseries(bbox):
+def test__isinstance_geodataframe_or_geoseries(voronoi):
+    if voronoi._isinstance_geodataframe_or_geoseries(bbox):
         return True
 
 
-def test__str_to_geometry(h3_tess):
-    assert isinstance(h3_tess._str_to_geometry("Milan, Italy", 1), gpd.GeoDataFrame)
+def test__str_to_geometry(voronoi):
+    assert isinstance(voronoi._str_to_geometry("Milan, Italy", 1), gpd.GeoDataFrame)
 
 
-def test__find_first_polygon_expected_length(h3_tess):
+def test__find_first_polygon_expected_length(voronoi):
     base_shapes = bbox.append({"geometry": Point(9, 45)}, ignore_index=True)
-    first_polygon = h3_tess._find_first_polygon(base_shapes)
+    first_polygon = voronoi._find_first_polygon(base_shapes)
     assert isinstance(first_polygon.values.tolist()[0][0], Polygon)
 
 
-def test__find_first_polygon_expected_type(h3_tess):
+def test__find_first_polygon_expected_type(voronoi):
     base_shapes = bbox.append({"geometry": Point(9, 45)}, ignore_index=True)
-    first_polygon = h3_tess._find_first_polygon(base_shapes)
+    first_polygon = voronoi._find_first_polygon(base_shapes)
     assert isinstance(first_polygon.values.tolist()[0][0], Polygon)
 
 
-def test__isinstance_poly_or_multipolygon(h3_tess):
+def test__isinstance_poly_or_multipolygon(voronoi):
     candidate_polygon = Polygon([[1, 0], [1, 1], [0, 1], [0, 0]])
-    if h3_tess._isinstance_poly_or_multipolygon(candidate_polygon):
+    if voronoi._isinstance_poly_or_multipolygon(candidate_polygon):
         return True
 
 
-def test__merge_all_polygons(h3_tess):
-    assert h3_tess._merge_all_polygons(bbox).shape[0] == 1
+def test__merge_all_polygons(voronoi):
+    assert voronoi._merge_all_polygons(bbox).shape[0] == 1
 
 
 @pytest.mark.parametrize("input_meters, expected_resolution", [(5000, 6), (50000, 3)])

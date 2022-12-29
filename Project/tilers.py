@@ -57,6 +57,7 @@ class VoronoiTessellationTiler(TessellationTiler):
         self, 
         points, 
         base_shape, 
+        meters=None, #not needed, kept for compatibility reasons
         which_osm_result=-1,
         crs=constants.DEFAULT_CRS):
 
