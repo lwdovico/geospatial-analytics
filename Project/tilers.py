@@ -64,14 +64,14 @@ class VoronoiTessellationTiler(TessellationTiler):
 
             if isinstance(points, gpd.GeoDataFrame):
                 
-                points.to_crs(crs=crs, inplace=True)
+                points.set_crs(constants.DEFAULT_CRS, allow_override = True, inplace = True)
                 
                 if not all(isinstance(x, Point) for x in points.geometry):
                     
                     raise ValueError("Not valid points object. Accepted type is: GeoDataFrame with a valid geometry column.")
                     
                     
-            elif isinstance(points, list):
+            elif isinstance(points, (list, np.ndarray)):
                 
                 is_not_correct_type = not all(isinstance(x, (tuple, list, np.ndarray, Point)) for x in points)
                 wrong_pairs = not all(len(x) == 2 for x in points if type(x) != Point)
@@ -285,6 +285,16 @@ class VoronoiTessellationTiler(TessellationTiler):
                     return self.edge.region[region]
                 else:
                     return self.edge.region[other_region]
+
+            def __lt__(self, other):
+                # It may rarely happen that while pushing the he into the queue two he are
+                # compared because the sweepline and intersection point x-axis were equal.
+                #
+                # In this case it tries to tell which is the smaller but it doesn't really
+                # matter as they are identical in the end.
+                # The purpose is guaranteing a "first-come-first-served" policy.
+                return True
+                
 
             @staticmethod
             def check_pt_right(pt, he):
